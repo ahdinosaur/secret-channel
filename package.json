@@ -1,0 +1,35 @@
+{
+  "name": "secret-channel",
+  "version": "0.0.0",
+  "description": "Streaming authenticated encryption using STREAM + ChaCha20-Poly1305",
+  "main": "./src/index.js",
+  "scripts": {
+    "test": "node --test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ahdinosaur/secret-channel.git"
+  },
+  "keywords": [
+    "stream",
+    "streaming",
+    "pull",
+    "aead",
+    "crypto",
+    "cryptography",
+    "chacha20-poly1305",
+    "chacha20poly1305",
+    "authenticated",
+    "encryption"
+  ],
+  "author": "Michael Williams <hello@mikey.nz>",
+  "license": "Apache-2.0",
+  "bugs": {
+    "url": "https://github.com/ahdinosaur/secret-channel/issues"
+  },
+  "homepage": "https://github.com/ahdinosaur/secret-channel#readme",
+  "dependencies": {
+    "@noble/ciphers": "^0.4.0"
+  },
+  "devDependencies": {}
+}
