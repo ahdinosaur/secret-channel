@@ -1,5 +1,7 @@
 # `secret-channel`
 
+[![npm version](https://img.shields.io/npm/v/secret-channel.svg?style=flat-square)](https://www.npmjs.com/package/secret-channel) [![npm downloads](https://img.shields.io/npm/dt/secret-channel?style=flat-square)](https://www.npmjs.com/package/secret-channel) [![ci status](https://img.shields.io/github/actions/workflow/status/ahdinosaur/secret-channel/node.js.yml?style=flat-square)](https://github.com/ahdinosaur/secret-channel/actions/workflows/node.js.yml?query=branch%3Amain)
+
 Streaming authenticated encryption using ChaCha20-Poly1305 ([RFC 8439](https://datatracker.ietf.org/doc/html/rfc8439)) (or other [AEAD constructions](https://libsodium.gitbook.io/doc/secret-key_cryptography/aead)).
 
 See [project README.md](../../README.md) for more information.

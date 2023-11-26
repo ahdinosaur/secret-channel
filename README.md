@@ -38,6 +38,8 @@ See [SPEC.md](./SPEC.md)
 
 #### Protocol
 
+[![npm version](https://img.shields.io/npm/v/secret-channel.svg?style=flat-square)](https://www.npmjs.com/package/secret-channel) [![npm downloads](https://img.shields.io/npm/dt/secret-channel?style=flat-square)](https://www.npmjs.com/package/secret-channel)
+
 [`secret-channel`](./js/secret-channel)
 
 #### Pull Stream
