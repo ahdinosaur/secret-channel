@@ -15,7 +15,7 @@ test('test hello world goodbye', async (t) => {
 
   const encrypter = new StreamEncrypter(key)
 
-  console.log(encrypter.next_content(content1))
-  console.log(encrypter.next_content(content2))
-  console.log(encrypter.goodbye())
+  console.log(encrypter.next(content1))
+  console.log(encrypter.next(content2))
+  console.log(encrypter.end())
 })

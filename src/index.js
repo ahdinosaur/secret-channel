@@ -6,11 +6,8 @@ const KEY_SIZE = 32
 const TAG_SIZE = 16
 
 const NONCE_SIZE = 12
-const TYPELENGTH_SIZE = 2
+const LENGTH_SIZE = 2
 const COUNTER_MAX = 2n ** 64n
-
-const TYPE_CONTENT = 0
-const TYPE_GOODBYE = 1
 
 class StreamCounter {
   #sequence
@@ -49,29 +46,32 @@ class StreamEncrypter {
     this.#counter = new StreamCounter()
   }
 
-  next_content(plaintext) {
-    const typelength = plaintext.byteLength | (TYPE_CONTENT << 15)
-    const header = this.#next_header(typelength)
-    const content = this.#next_content(plaintext)
-    return concatBytes(header, content)
+  next(plaintext) {
+    const length = this.#chunkLength(plaintext.byteLength)
+    const content = this.#chunkContent(plaintext)
+    return concatBytes(length, content)
   }
 
-  goodbye() {
-    const typelength = 0 | (TYPE_GOODBYE << 15)
-    const goodbye = this.#next_header(typelength)
+  end() {
+    const eos = this.#chunkEndOfStream()
     // TODO delete the key
-    return goodbye
+    return eos
   }
 
-  #next_header(typelength) {
-    const header = new Uint8Array(TYPELENGTH_SIZE)
-    const headerDataView = new DataView(header.buffer)
-    headerDataView.setInt16(0, typelength, true)
-    return this.#encrypt(header)
+  #chunkLength(length) {
+    const lengthData = new Uint8Array(LENGTH_SIZE)
+    const lengthDataView = new DataView(lengthData.buffer)
+    lengthDataView.setInt16(0, length, true)
+    return this.#encrypt(lengthData)
   }
 
-  #next_content(plaintext) {
-    return this.#encrypt(plaintext)
+  #chunkContent(content) {
+    return this.#encrypt(content)
+  }
+
+  #chunkEndOfStream() {
+    const eos = new Uint8Array(LENGTH_SIZE).fill(0)
+    return this.#encrypt(eos)
   }
 
   #encrypt(bytes) {
