@@ -1,5 +1,5 @@
 const protocol = require('./protocol')
-const crypto = require('./crypto-native')
+const crypto = require('./crypto-javascript')
 const constants = require('./constants')
 
 module.exports = {

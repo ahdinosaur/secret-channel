@@ -6,6 +6,9 @@
   "scripts": {
     "test": "node --test"
   },
+  "browser": {
+    "./src/index.js": "./src/javascript.js"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/ahdinosaur/secret-channel.git"
@@ -29,7 +32,9 @@
   },
   "homepage": "https://github.com/ahdinosaur/secret-channel#readme",
   "dependencies": {
-    "@noble/ciphers": "^0.4.0"
-  },
-  "devDependencies": {}
+    "@noble/ciphers": "^0.4.0",
+    "b4a": "^1.6.4",
+    "debug": "^4.3.4",
+    "sodium-native": "^4.0.4"
+  }
 }
