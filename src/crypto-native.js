@@ -22,6 +22,6 @@ function encrypt(key, nonce, plaintext) {
 
 function decrypt(key, nonce, ciphertext) {
   const plaintext = b4a.allocUnsafe(ciphertext.byteLength - ABYTES)
-  sodiumDecrypt(plaintext, null, ciphertext, null, null, nonce, key)
+  sodiumDecrypt(plaintext, null, ciphertext, null, nonce, key)
   return plaintext
 }

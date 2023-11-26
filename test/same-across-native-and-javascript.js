@@ -21,10 +21,10 @@ test('encrypt: native and javascript are the same', async (t) => {
   for (let i = 0; i < contents.length; i++) {
     const content = contents[i]
 
-    const nativeBytes = nativeEncrypter.next(content)
+    const nativeBytes = b4a.concat(nativeEncrypter.next(content))
 
     const jsContent = Uint8Array.from(content)
-    const jsBytes = jsEncrypter.next(jsContent)
+    const jsBytes = b4a.concat(jsEncrypter.next(jsContent))
 
     assert(b4a.equals(nativeBytes, jsBytes), `contents match at index ${i}`)
   }

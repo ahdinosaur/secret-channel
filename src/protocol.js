@@ -27,7 +27,7 @@ class StreamEncrypter {
   constructor(crypto, key) {
     this.#crypto = crypto
 
-    if (key.byteLength !== KEY_SIZE) {
+    if (key.length !== KEY_SIZE) {
       throw new Error(`secret-channel/StreamEncrypter: key must be ${KEY_SIZE} bytes`)
     }
     this.#key = key
@@ -39,7 +39,7 @@ class StreamEncrypter {
     const plaintextBuffer = b4a.from(plaintext)
     const length = this.#chunkLength(plaintextBuffer.length)
     const content = this.#chunkContent(plaintextBuffer)
-    return b4a.concat([length, content])
+    return [length, content]
   }
 
   end() {
@@ -50,11 +50,7 @@ class StreamEncrypter {
 
   #chunkLength(length) {
     const lengthData = b4a.allocUnsafe(LENGTH_SIZE)
-    const lengthDataView = new DataView(
-      lengthData.buffer,
-      lengthData.byteOffset,
-      lengthData.byteLength,
-    )
+    const lengthDataView = new DataView(lengthData.buffer, lengthData.byteOffset, lengthData.length)
     lengthDataView.setInt16(0, length, true)
     return this.#encrypt(lengthData)
   }
@@ -74,18 +70,70 @@ class StreamEncrypter {
   }
 }
 
-function createStreamEncrypter(crypto, key) {
-  return new StreamEncrypter(crypto, key)
-}
+const endOfStreamBytes = b4a.alloc(LENGTH_SIZE, 0)
 
-/*
 class StreamDecrypter {
-  constructor(key, nonce, options) {}
-}
-*/
+  #crypto
+  #key
+  #counter
 
-module.exports = {
-  createStreamEncrypter,
-  KEY_SIZE,
-  TAG_SIZE,
+  constructor(crypto, key) {
+    this.#crypto = crypto
+
+    if (key.length !== KEY_SIZE) {
+      throw new Error(`secret-channel/StreamDecrypter: key must be ${KEY_SIZE} bytes`)
+    }
+    this.#key = key
+
+    this.#counter = new StreamCounter()
+  }
+
+  lengthOrEnd(ciphertext) {
+    if (ciphertext.length !== LENGTH_SIZE + TAG_SIZE) {
+      throw new Error(
+        `secret-channel/StreamDecrypter: length / end ciphertext must be ${
+          LENGTH_SIZE + TAG_SIZE
+        } bytes`,
+      )
+    }
+
+    const plaintext = this.#decrypt(ciphertext)
+
+    if (plaintext.equals(endOfStreamBytes)) {
+      // TODO delete the key
+      return {
+        type: 'end-of-stream',
+      }
+    }
+
+    const lengthData = plaintext
+    const lengthDataView = new DataView(lengthData.buffer, lengthData.byteOffset, lengthData.length)
+    const length = lengthDataView.getInt16(0, true)
+    return {
+      type: 'length',
+      length,
+    }
+  }
+
+  content(ciphertext) {
+    return this.#decrypt(ciphertext)
+  }
+
+  #decrypt(bytes) {
+    const nonce = this.#counter.next()
+    return this.#crypto.decrypt(this.#key, nonce, bytes)
+  }
 }
+
+function protocol(crypto) {
+  return {
+    createStreamEncrypter(key) {
+      return new StreamEncrypter(crypto, key)
+    },
+    createStreamDecrypter(key) {
+      return new StreamDecrypter(crypto, key)
+    },
+  }
+}
+
+module.exports = protocol

@@ -3,10 +3,6 @@ const crypto = require('./crypto-native')
 const constants = require('./constants')
 
 module.exports = {
-  createStreamEncrypter,
+  ...protocol(crypto),
   ...constants,
-}
-
-function createStreamEncrypter(key) {
-  return protocol.createStreamEncrypter(crypto, key)
 }
