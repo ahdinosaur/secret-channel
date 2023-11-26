@@ -1,6 +1,6 @@
 {
   "name": "secret-channel",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Streaming authenticated encryption using STREAM + ChaCha20-Poly1305",
   "main": "./src/index.js",
   "scripts": {
