@@ -20,7 +20,7 @@ Streaming authenticated encryption using ChaCha20-Poly1305 ([RFC 8439](https://d
 
 `secret-channel` protects the stream from:
 
-- Stream truncation: avoided by checking for the "goodbye" tag in the final header chunk.
+- Stream truncation: avoided by checking for "end-of-stream" as the final chunk.
 - Chunk removal: the wrong nonce would be used, producing an AEAD decryption error.
 - Chunk reordering: the wrong nonce would be used, producing an AEAD decryption error.
 - Chunk duplication: the wrong nonce would be used, producing an AEAD decryption error.
@@ -29,18 +29,18 @@ Streaming authenticated encryption using ChaCha20-Poly1305 ([RFC 8439](https://d
 ## Stream
 
 ```txt
-+--------------------------+------------------------------------------------------------+
-|  header (content) chunk  |       content chunk       | ... |  header (goodbye) chunk  |
-+--------------------------+---------------------------+-----+--------------------------+
-| 2B type/length + 16B tag | variable length + 16B tag | ... | 2B type/length + 16B tag |
-+--------------------------+---------------------------+-----+--------------------------+
++---------------------+-------------------------------------------------------+
+|    length chunk     |       content chunk       | ... | end-of-stream chunk |
++---------------------+---------------------------+-----+---------------------+
+| 2B length + 16B tag | variable length + 16B tag | ... | 2B zeros + 16B tag  |
++---------------------+---------------------------+-----+---------------------+
 ```
 
 ```mermaid
 flowchart LR
-    h0 --> c1 --> h2 --> c3 --> g4
+    l0 --> c1 --> l2 --> c3 --> eos4
 
-    subgraph h0 [first header]
+    subgraph l0 [first length]
         direction TB
         P0["Plaintext"]
         Ek0["Encrypt"]
@@ -49,9 +49,7 @@ flowchart LR
 
         Co0["Counter = 0"] --> N0
         N0["Nonce"] --> Ek0
-
         L0["Length = 6"] --> P0
-        T0["Type = Content"] --> P0
     end
 
     subgraph c1 [first content]
@@ -66,7 +64,7 @@ flowchart LR
         P1 --> Ek1 --> Ci1
     end
 
-    subgraph h2 [second header]
+    subgraph l2 [second length]
         direction TB
         P2["Plaintext"]
         Ek2["Encrypt"]
@@ -75,9 +73,7 @@ flowchart LR
 
         Co2["Counter = 2"] --> N2
         N2["Nonce"] --> Ek2
-
         L2["Length = 8"] --> P2
-        T2["Type = Content"] --> P2
     end
 
     subgraph c3 [second content]
@@ -92,7 +88,7 @@ flowchart LR
         P3 --> Ek3 --> Ci3
     end
 
-    subgraph g4 [goodbye]
+    subgraph eos4 [end-of-stream]
         direction TB
         P4["Plaintext"]
         Ek4["Encrypt"]
@@ -101,9 +97,7 @@ flowchart LR
 
         Co4["Counter = 4"] --> N4
         N4["Nonce"] --> Ek4
-
-        L4["Length = 0"] --> P4
-        T4["Type = Goodbye"] --> P4
+        L4["End-of-stream"] --> P4
     end
 ```
 
@@ -118,8 +112,8 @@ TODO
 
 Data is sent over the channel in chunks.
 
-- Either (Length Header, Content) chunk pairs,
-- or a single (Goodbye Header) chunk.
+- Either ([Length](#length-chunk), [Content](#content-chunk)) chunk pairs,
+- or a single ([End-of-stream](#end-of-stream-chunk)) chunk.
 
 Each chunk MUST have a unique nonce.
 
@@ -148,50 +142,43 @@ If the counter sequence number overflows, the channel MUST end. (This is not exp
 
 ### Chunks
 
-#### Header
+#### Length chunk
 
-We start with a header chunk, seen here in plaintext:
+We start with a length chunk, seen here in plaintext:
 
 ```txt
-2 byte header (plaintext):
+2 byte length (plaintext):
 +---------------+
-| type + length |
+|     length    |
 +---------------+
 |  2B (u16_le)  |
 +---------------+
 ```
 
-The header is a 16-bits unsigned integer (encoded as little-endian).
+The length is a 16-bits unsigned integer (encoded as little-endian).
 
-The type is encoded as the most-significant bit:
+(The maximum content length is 2^16 bytes or 65,536 bytes or 65.536 Kb)
 
-- `CONTENT`: `0`
-- `GOODBYE`: `1`
+A length of `0` is not a valid length. (And instead refers to a [End-of-stream chunk](#end-of-stream-chunk))
 
-If `CONTENT`, the length of the content is the remaining 15 bits.
-
-```
-type_and_length = length | (type << 15)
-```
-
-(The maximum content length is 32,768 bytes or 32.768 Kb)
-
-We encrypt and authenticate the header into the following ciphertext:
+We encrypt and authenticate the length with ChaCha20-Poly1305 into the following ciphertext:
 
 ```txt
-18 byte header (ciphertext):
+18 byte length (ciphertext):
 +------------------+------------+
-| encrypted header |  auth tag  |
+| encrypted length |  auth tag  |
 +------------------+------------+
 |        2B        |    16B     |
 +------------------+------------+
 ```
 
-#### Content
+#### Content chunk
 
-A content chunk is simply the content, encrypted.
+A content chunk is simply the content.
 
-From 0 to 32,768 bytes.
+From 0 to 2^16 (65,536) bytes. (Matching the length in the previous chunk.)
+
+If content is larger than 2^16 (65,536) bytes, split the bytes across multiple chunks.
 
 ```txt
 Variable length content (plaintext):
@@ -202,6 +189,8 @@ Variable length content (plaintext):
 +-----------------+
 ```
 
+Then encrypted and authenticated with ChaCha20-Poly1305.
+
 ```txt
 Variable length content (ciphertext):
 +----------------------+------------+
@@ -209,6 +198,30 @@ Variable length content (ciphertext):
 +----------------------+------------+
 |    variable length   |    16B     |
 +----------------------+------------+
+```
+
+### End-of-stream chunk
+
+A end-of-stream chunk is 2 bytes (the size of a [Length chunk](#length-chunk)) of all zeros.
+
+```txt
+2 byte end-of-stream (plaintext):
++---------------+
+| end-of-stream |
++---------------+
+|   2B zeros    |
++---------------+
+```
+
+Then encrypted and authenticated with ChaCha20-Poly1305.
+
+```txt
+18 byte end-of-stream (ciphertext):
++-----------------+------------+
+| encrypted zeros |  auth tag  |
++-----------------+------------+
+|        2B       |    16B     |
++-----------------+------------+
 ```
 
 ## References
