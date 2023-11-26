@@ -1,10 +1,9 @@
 const b4a = require('b4a')
 
 const { incrementBuffer } = require('./util')
-const { KEY_SIZE, TAG_SIZE } = require('./constants')
+const { KEY_SIZE, LENGTH_OR_END_PLAINTEXT, LENGTH_OR_END_CIPHERTEXT } = require('./constants')
 
 const NONCE_SIZE = 12
-const LENGTH_SIZE = 2
 
 class StreamCounter {
   #nonce
@@ -49,7 +48,7 @@ class StreamEncrypter {
   }
 
   #chunkLength(length) {
-    const lengthData = b4a.allocUnsafe(LENGTH_SIZE)
+    const lengthData = b4a.allocUnsafe(LENGTH_OR_END_PLAINTEXT)
     const lengthDataView = new DataView(lengthData.buffer, lengthData.byteOffset, lengthData.length)
     lengthDataView.setInt16(0, length, true)
     return this.#encrypt(lengthData)
@@ -60,7 +59,7 @@ class StreamEncrypter {
   }
 
   #chunkEndOfStream() {
-    const eos = b4a.alloc(LENGTH_SIZE, 0)
+    const eos = b4a.alloc(LENGTH_OR_END_PLAINTEXT, 0)
     return this.#encrypt(eos)
   }
 
@@ -70,7 +69,7 @@ class StreamEncrypter {
   }
 }
 
-const endOfStreamBytes = b4a.alloc(LENGTH_SIZE, 0)
+const endOfStreamBytes = b4a.alloc(LENGTH_OR_END_PLAINTEXT, 0)
 
 class StreamDecrypter {
   #crypto
@@ -89,11 +88,9 @@ class StreamDecrypter {
   }
 
   lengthOrEnd(ciphertext) {
-    if (ciphertext.length !== LENGTH_SIZE + TAG_SIZE) {
+    if (ciphertext.length !== LENGTH_OR_END_CIPHERTEXT) {
       throw new Error(
-        `secret-channel/StreamDecrypter: length / end ciphertext must be ${
-          LENGTH_SIZE + TAG_SIZE
-        } bytes`,
+        `secret-channel/StreamDecrypter: length / end ciphertext must be ${LENGTH_OR_END_CIPHERTEXT} bytes`,
       )
     }
 
@@ -127,10 +124,10 @@ class StreamDecrypter {
 
 function protocol(crypto) {
   return {
-    createStreamEncrypter(key) {
+    createEncrypter(key) {
       return new StreamEncrypter(crypto, key)
     },
-    createStreamDecrypter(key) {
+    createDecrypter(key) {
       return new StreamDecrypter(crypto, key)
     },
   }

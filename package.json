@@ -1,40 +1,14 @@
 {
-  "name": "secret-channel",
-  "version": "0.0.0",
-  "description": "Streaming authenticated encryption using STREAM + ChaCha20-Poly1305",
-  "main": "./src/index.js",
+  "name": "secret-channel-project",
   "scripts": {
-    "test": "node --test"
+    "test": "npm run test --workspaces --if-present",
+    "lint": "prettier --check \"./js/*/(src|test|bench)/**/*.js\"",
+    "format": "prettier --write \"./js/*/(src|test|bench)/**/*.js\""
   },
-  "browser": {
-    "./src/index.js": "./src/javascript.js"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/ahdinosaur/secret-channel.git"
-  },
-  "keywords": [
-    "stream",
-    "streaming",
-    "pull",
-    "aead",
-    "crypto",
-    "cryptography",
-    "chacha20-poly1305",
-    "chacha20poly1305",
-    "authenticated",
-    "encryption"
+  "workspaces": [
+    "./js/*"
   ],
-  "author": "Michael Williams <hello@mikey.nz>",
-  "license": "Apache-2.0",
-  "bugs": {
-    "url": "https://github.com/ahdinosaur/secret-channel/issues"
-  },
-  "homepage": "https://github.com/ahdinosaur/secret-channel#readme",
-  "dependencies": {
-    "@noble/ciphers": "^0.4.0",
-    "b4a": "^1.6.4",
-    "debug": "^4.3.4",
-    "sodium-native": "^4.0.4"
+  "devDependencies": {
+    "prettier": "^3.1.0"
   }
 }

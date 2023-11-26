@@ -15,8 +15,8 @@ test('encrypt: native and javascript are the same', async (t) => {
     contents.push(randomBytes(randomInt(10, 100)))
   }
 
-  const nativeEncrypter = native.createStreamEncrypter(key)
-  const jsEncrypter = js.createStreamEncrypter(key)
+  const nativeEncrypter = native.createEncrypter(key)
+  const jsEncrypter = js.createEncrypter(key)
 
   for (let i = 0; i < contents.length; i++) {
     const content = contents[i]
