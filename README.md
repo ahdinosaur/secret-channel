@@ -4,6 +4,8 @@
 
 A protocol for a secure peer-to-peer message stream, after you've done a secure peer-to-peer key exchange.
 
+![Fig 7 Le Telephone by T du Moncel Paris 1880](./tin-can-telephone.jpg)
+
 (Note: This protocol has not been audited to be safe. Use at your own risk.)
 
 ## Pre-requisites
