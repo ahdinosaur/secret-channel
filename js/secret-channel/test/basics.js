@@ -3,17 +3,18 @@ const test = require('node:test')
 const assert = require('node:assert')
 const { randomBytes } = require('node:crypto')
 
-const { createEncrypter, KEY_SIZE, createDecrypter } = require('../')
+const { createEncrypter, createDecrypter, KEY_SIZE, NONCE_SIZE } = require('../')
 
 test('roundtrip hello world', async (t) => {
   // generate a random secret, `KEY_SIZE` bytes long
   const key = randomBytes(KEY_SIZE)
+  const nonce = randomBytes(NONCE_SIZE)
 
   const contentPlaintext1 = b4a.from('hello')
   const contentPlaintext2 = b4a.from('world')
 
-  const encrypter = createEncrypter(key)
-  const decrypter = createDecrypter(key)
+  const encrypter = createEncrypter(key, nonce)
+  const decrypter = createDecrypter(key, nonce)
 
   const [lengthCiphertext1, contentCiphertext1] = encrypter.next(contentPlaintext1)
   const [lengthCiphertext2, contentCiphertext2] = encrypter.next(contentPlaintext2)

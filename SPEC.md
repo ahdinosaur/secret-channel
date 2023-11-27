@@ -13,7 +13,7 @@ Data is sent over the channel in chunks.
 - Either ([Length](#length-chunk), [Content](#content-chunk)) chunk pairs,
 - or a single ([End-of-stream](#end-of-stream-chunk)) chunk.
 
-Each chunk MUST be encrypted with a unique nonce.
+Each chunk MUST be encrypted with a unique [nonce](#nonces).
 
 ```txt
 +---------------------+-------------------------------------------------------+
@@ -25,26 +25,27 @@ Each chunk MUST be encrypted with a unique nonce.
 
 ### Nonces
 
-To ensure unique nonces over the channel session, we will use a simple counter.
+ChaCha20-Poly1305 requires a 12-byte (96-bit) nonce.
 
-The counter starts at 0 and increments by 1 with every chunk.
+We must ensure both random and unique nonces over the channel session.
 
-(This is okay because 1) we will never re-use a key, and 2) a 256-bit key protects against [batch/multi-target attacks](https://blog.cr.yp.to/20151120-batchattacks.html).)
+We start with a preset (random) 12-byte (96-bit) nonce, provided when creating the stream.
 
-Since the ChaCha20-Poly1305 nonce is 12 bytes (96-bits), we will use a 64-bit unsigned integer as our counter sequence number.
+After each chunk, we increment the 12-byte (96-bit) nonce as a little-endian unsigned integer.
 
-The 64-bit counter sequence number is encoded to the 96-bit nonce as follows:
+To increment a 12-byte little-endian unsigned integer, see [libsodium `increment`](https://doc.libsodium.org/helpers#incrementing-large-numbers), or the following JavaScript code:
 
-```txt
-nonce:
-+-----------------+-------------+
-| sequence number |   padding   |
-+-----------------+-------------+
-|   8B (u64_le)   | 4B (0x0000) |
-+-----------------+-------------+
+```js
+function increment(buf) {
+  const len = buf.length
+  let c = 1
+  for (let i = 0; i < len; i++) {
+    c += buf[i]
+    buf[i] = c
+    c >>= 8
+  }
+}
 ```
-
-If the counter sequence number overflows, the channel MUST end. (This is not expected to happen.)
 
 ### Chunks
 
@@ -57,11 +58,11 @@ We start with a length chunk, seen here in plaintext:
 +---------------+
 |     length    |
 +---------------+
-|  2B (u16_le)  |
+|  2B (u16_be)  |
 +---------------+
 ```
 
-The length is a 16-bits unsigned integer (encoded as little-endian).
+The length is a 16-bits unsigned integer (encoded as big-endian).
 
 (The maximum content length is 2^16 bytes or 65,536 bytes or 65.536 Kb)
 

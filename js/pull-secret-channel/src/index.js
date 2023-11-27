@@ -4,6 +4,7 @@ const {
   createEncrypter,
   createDecrypter,
   KEY_SIZE,
+  NONCE_SIZE,
   LENGTH_OR_END_CIPHERTEXT,
   TAG_SIZE,
 } = require('secret-channel')
@@ -12,11 +13,12 @@ module.exports = {
   pullEncrypter,
   pullDecrypter,
   KEY_SIZE,
+  NONCE_SIZE,
   TAG_SIZE,
 }
 
-function pullEncrypter(key) {
-  const encrypter = createEncrypter(key)
+function pullEncrypter(key, nonce) {
+  const encrypter = createEncrypter(key, nonce)
 
   return pullThrough(
     function pullEncrypterData(contentPlaintext) {
@@ -33,8 +35,8 @@ function pullEncrypter(key) {
   )
 }
 
-function pullDecrypter(key) {
-  const decrypter = createDecrypter(key)
+function pullDecrypter(key, nonce) {
+  const decrypter = createDecrypter(key, nonce)
 
   let ending = null
   const reader = pullReader()
