@@ -1,5 +1,7 @@
 # "Secret Channel" Specification
 
+Streaming authenticated encryption using ChaCha20-Poly1305 ([RFC 8439](https://datatracker.ietf.org/doc/html/rfc8439)).
+
 ## Pre-requisites
 
 - The channel must be reliable and ordered: i.e. TCP.
