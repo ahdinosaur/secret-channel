@@ -17,10 +17,12 @@ npm install --save pull-secret-channel
 ```js
 const { randomBytes } = require('crypto')
 const pull = require('pull-stream')
-const { KEY_SIZE, pullEncrypter, pullDecrypter } = require('pull-secret-channel')
+const { pullEncrypter, pullDecrypter, KEY_SIZE, NONCE_SIZE } = require('pull-secret-channel')
 
 // generate a random secret, `KEY_SIZE` bytes long.
 const key = randomBytes(KEY_SIZE)
+// generate a random nonce, `NONCE_SIZE` bytes long.
+const nonce = randomBytes(NONCE_SIZE)
 
 const plaintext1 = Buffer.from('hello world')
 
@@ -28,7 +30,7 @@ pull(
   pull.values([plaintext1]),
 
   // encrypt every byte
-  pullEncrypter(key),
+  pullEncrypter(key, nonce),
 
   // the encrypted stream
   pull.through((ciphertext) => {
@@ -36,7 +38,7 @@ pull(
   }),
 
   // decrypt every byte
-  pullDecrypter(key),
+  pullDecrypter(key, nonce),
 
   pull.concat((err, plaintext2) => {
     if (err) throw err
@@ -47,7 +49,7 @@ pull(
 
 ## API
 
-### `pullEncrypter(key)`
+### `pullEncrypter(key, nonce)`
 
 Returns a "through" pull-stream.
 
@@ -58,7 +60,7 @@ For every plaintext content item in stream:
 
 And when stream done, constructs and encrypts an end-of-stream message.
 
-### `pullDecrypter(key)`
+### `pullDecrypter(key, nonce)`
 
 Returns a "through" pull-stream.
 
@@ -73,6 +75,10 @@ If stream ends without end-of-stream message, aborts with an error.
 ### `KEY_SIZE`
 
 The size of a ChaCha20-Poly1305 key: 32 bytes
+
+### `NONCE_SIZE`
+
+The size of a ChaCha20-Poly1305 nonce: 12 bytes
 
 ### `TAG_SIZE`
 
