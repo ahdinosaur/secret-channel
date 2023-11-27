@@ -3,20 +3,22 @@ const test = require('node:test')
 const assert = require('node:assert')
 const { randomBytes, randomInt } = require('node:crypto')
 
+const { KEY_SIZE, NONCE_SIZE } = require('../src/constants')
 const native = require('../src/index')
 const js = require('../src/javascript')
 
 test('encrypt: native and javascript are the same', async (t) => {
   // generate a random secret, `KEYBYTES` bytes long.
-  const key = randomBytes(native.KEY_SIZE)
+  const key = randomBytes(KEY_SIZE)
+  const nonce = randomBytes(NONCE_SIZE)
 
   const contents = []
   for (let i = 0; i < randomInt(100, 1000); i++) {
     contents.push(randomBytes(randomInt(10, 100)))
   }
 
-  const nativeEncrypter = native.createEncrypter(key)
-  const jsEncrypter = js.createEncrypter(key)
+  const nativeEncrypter = native.createEncrypter(key, nonce)
+  const jsEncrypter = js.createEncrypter(key, nonce)
 
   for (let i = 0; i < contents.length; i++) {
     const content = contents[i]

@@ -1,10 +1,24 @@
 # "Secret Channel" Specification
 
+Streaming authenticated encryption using ChaCha20-Poly1305 ([RFC 8439](https://datatracker.ietf.org/doc/html/rfc8439)).
+
 ## Pre-requisites
 
 - The channel must be reliable and ordered: i.e. TCP.
 - Each channel key must be an ephemeral key for a single channel and discarded when the channel ends.
+    - To get an ephemeral key for a session, do a secure key exchange, such as [Noise](https://noiseprotocol.org/noise.html) or [Secret Handshake](https://dominictarr.github.io/secret-handshake-paper/shs.pdf) first.
+- For a duplex (bi-directional) connection between peers, create two secret channels (with separate keys), one in each direction.
 - A (key, nonce) pair must NEVER be re-used.
+
+## Security Guarantees
+
+`secret-channel` protects the stream from:
+
+- Stream truncation: avoided by checking for "end-of-stream" as the final chunk.
+- Chunk removal: the wrong nonce would be used, producing an AEAD decryption error.
+- Chunk reordering: the wrong nonce would be used, producing an AEAD decryption error.
+- Chunk duplication: the wrong nonce would be used, producing an AEAD decryption error.
+- Chunk modification: this is what an AEAD is designed to detect.
 
 ## Stream
 
@@ -13,7 +27,7 @@ Data is sent over the channel in chunks.
 - Either ([Length](#length-chunk), [Content](#content-chunk)) chunk pairs,
 - or a single ([End-of-stream](#end-of-stream-chunk)) chunk.
 
-Each chunk MUST be encrypted with a unique nonce.
+Each chunk MUST be encrypted with a unique [nonce](#nonces).
 
 ```txt
 +---------------------+-------------------------------------------------------+
@@ -25,26 +39,26 @@ Each chunk MUST be encrypted with a unique nonce.
 
 ### Nonces
 
-To ensure unique nonces over the channel session, we will use a simple counter.
+ChaCha20-Poly1305 requires a 12-byte (96-bit) nonce.
 
-The counter starts at 0 and increments by 1 with every chunk.
+We must ensure both random and unique nonces over the channel session.
 
-(This is okay because 1) we will never re-use a key, and 2) a 256-bit key protects against [batch/multi-target attacks](https://blog.cr.yp.to/20151120-batchattacks.html).)
+We start with a preset (random) 12-byte (96-bit) nonce, provided when creating the stream.
 
-Since the ChaCha20-Poly1305 nonce is 12 bytes (96-bits), we will use a 64-bit unsigned integer as our counter sequence number.
+After each chunk, we increment the 12-byte (96-bit) nonce as a little-endian unsigned integer.
 
-The 64-bit counter sequence number is encoded to the 96-bit nonce as follows:
+To increment a 12-byte little-endian unsigned integer, see [libsodium `increment`](https://doc.libsodium.org/helpers#incrementing-large-numbers), or the following JavaScript code:
 
-```txt
-nonce:
-+-----------------+-------------+
-| sequence number |   padding   |
-+-----------------+-------------+
-|   8B (u64_le)   | 4B (0x0000) |
-+-----------------+-------------+
+```js
+function increment(buf) {
+  let c = 1
+  for (let i = 0; i < buf.length; i++) {
+    c += buf[i]
+    buf[i] = c
+    c >>= 8
+  }
+}
 ```
-
-If the counter sequence number overflows, the channel MUST end. (This is not expected to happen.)
 
 ### Chunks
 
@@ -57,11 +71,11 @@ We start with a length chunk, seen here in plaintext:
 +---------------+
 |     length    |
 +---------------+
-|  2B (u16_le)  |
+|  2B (u16_be)  |
 +---------------+
 ```
 
-The length is a 16-bits unsigned integer (encoded as little-endian).
+The length is a 16-bits unsigned integer (encoded as big-endian).
 
 (The maximum content length is 2^16 bytes or 65,536 bytes or 65.536 Kb)
 
@@ -130,6 +144,62 @@ Then encrypted and authenticated with ChaCha20-Poly1305.
 +-----------------+------------+
 ```
 
+## Comparisons
+
+### Scuttlebutt's Box Stream
+
+Secret Channel is meant to be a successor to Scuttlebutt's [Box Stream](https://ssbc.github.io/scuttlebutt-protocol-guide/#box-stream).
+
+A few similarities:
+
+- Box Stream and Secret Channel both use a preset (random) nonce to start and then increment after each chunk.
+- Box Stream and Secret Channel both have length and content chunks.
+
+A few differences:
+
+- Box Stream increments the nonce as a big-endian unsigned integer.
+  - Secret Channel increments the nonce as little-endian, to be compatible with `libsodium.increment` and more favorable to most CPU architectures.
+- Box Stream uses `libsodium.crypto_secretbox_easy` and `libsodium.crypto_secretbox_open_easy`, which uses XSalsa20-Poly1305.
+  - Secret Channel uses ChaCha20-Poly1305 (the successor to Salsa20-Poly1305) as an AEAD directly.
+- Box Stream appends the authentication tag of the encrypted content into the plaintext of the length chunk.
+
+### Libsodium's secretstream
+
+Libsodium's secretstream is designed to be extra safe and resistant to developer misuse.
+
+Libsodium's secretstream has more features not included in Secret Channel:
+
+- secretstream is a chunked message stream, where each message has a tag: `TAG_MESSAGE`, `TAG_FINAL`, `TAG_PUSH`, and `TAG_REKEY`
+- secretstream uses HChaCha20 to derive a subkey and takes the last 64 bits of the nonce as the nonce for encryption.
+  - This nonce is stored/sent as a header from the encrypter to the decrypter at the beginning of the stream.
+- secretstream uses a 32-bit counter starting at 1 that is prepended to the 64-bit nonce
+  - After every message, the 64-bit nonce becomes the nonce XOR the first 64 bits of the Poly1305 tag.
+  - If the counter is 0, the stream will automatically re-key
+- secretstream gives no guidance on how to handle variable length messages.
+  - Libsodium provides functions `sodium_pad` and `sodium_unpad` to pad messages to fixed lengths.
+
+Both secretstream and Secret Channel use ChaCha20-Poly1305 for encryption.
+
+secretstream has affordances that Secret Channel doesn't need:
+
+- By sending the initial nonce as a header, secretstream doesn't require the encrypter and decrypter to have a shared initial nonce.
+  - Secret Channel is designed for a use with Secret Handshake where we already have a way to generate a shared initial nonce.
+- By using a 64-bit random nonce with a 32-bit counter, secretstream is more safe to re-use keys???
+  - Secret Channel explicitly disallows any key re-use.
+- By XOR'ing the nonce with the previous Poly1305 tag, secretstream is more safe ...???
+  - This also prevents random-access decryption.
+
+### STREAM + ChaCha20-Poly1305
+
+STREAM is designed to avoid nonce-reuse in practical settings where keys may be re-used.
+
+- STREAM is a pattern of using any AEAD as a stream of messages.
+- STREAM encodes the last message with a tag in the AD.
+- STREAM creates each nonce from a random 64-bit prefix and a 32-bit counter.
+  - The likelihood of a collision, even when re-using keys, is considered safe enough.
+  - Secret Channel avoids this problem by explicitly disallowing any key re-use.
+- STREAM gives no guidance on how to handle variable length messages.
+
 ## References
 
 - [STREAM: "Online Authenticated-Encryption and its Nonce-Reuse Misuse-Resistance"](https://eprint.iacr.org/2015/189.pdf).
@@ -138,3 +208,4 @@ Then encrypted and authenticated with ChaCha20-Poly1305.
 - [shadowsocks SIP022 AEAD-2022](https://github.com/shadowsocks/shadowsocks-org/blob/main/docs/doc/sip022.md)
 - [libsodium: Encrypting a set of related messages](https://libsodium.gitbook.io/doc/secret-key_cryptography/encrypted-messages)
 - [ChaCha20-Poly1305 Cipher Suites for Transport Layer Security (TLS)](https://www.rfc-editor.org/rfc/rfc7905)
+- [The Security of ChaCha20-Poly1305 in the Multi-user Setting](https://eprint.iacr.org/2023/085.pdf)
