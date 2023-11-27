@@ -4,7 +4,19 @@
 
 - The channel must be reliable and ordered: i.e. TCP.
 - Each channel key must be an ephemeral key for a single channel and discarded when the channel ends.
+    - To get an ephemeral key for a session, do a secure key exchange, such as [Noise](https://noiseprotocol.org/noise.html) or [Secret Handshake](https://dominictarr.github.io/secret-handshake-paper/shs.pdf) first.
+- For a duplex (bi-directional) connection between peers, create two secret channels (with separate keys), one in each direction.
 - A (key, nonce) pair must NEVER be re-used.
+
+## Security Guarantees
+
+`secret-channel` protects the stream from:
+
+- Stream truncation: avoided by checking for "end-of-stream" as the final chunk.
+- Chunk removal: the wrong nonce would be used, producing an AEAD decryption error.
+- Chunk reordering: the wrong nonce would be used, producing an AEAD decryption error.
+- Chunk duplication: the wrong nonce would be used, producing an AEAD decryption error.
+- Chunk modification: this is what an AEAD is designed to detect.
 
 ## Stream
 
@@ -164,9 +176,7 @@ Libsodium's secretstream has more features not included in Secret Channel:
 - secretstream gives no guidance on how to handle variable length messages.
   - Libsodium provides functions `sodium_pad` and `sodium_unpad` to pad messages to fixed lengths.
 
-Overlap:
-
-- secretstream and Secret Channel both use ChaCha20-Poly1305 for encryption.
+Both secretstream and Secret Channel use ChaCha20-Poly1305 for encryption.
 
 secretstream has affordances that Secret Channel doesn't need:
 
@@ -185,6 +195,7 @@ STREAM is designed to avoid nonce-reuse in practical settings where keys may be 
 - STREAM encodes the last message with a tag in the AD.
 - STREAM creates each nonce from a random 64-bit prefix and a 32-bit counter.
   - The likelihood of a collision, even when re-using keys, is considered safe enough.
+  - Secret Channel avoids this problem by explicitly disallowing any key re-use.
 - STREAM gives no guidance on how to handle variable length messages.
 
 ## References

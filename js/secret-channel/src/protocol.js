@@ -7,7 +7,7 @@ const {
   LENGTH_OR_END_CIPHERTEXT,
 } = require('./constants')
 
-class StreamEncrypter {
+class Encrypter {
   #crypto
   #key
   #nonce
@@ -16,18 +16,18 @@ class StreamEncrypter {
     this.#crypto = crypto
 
     if (!b4a.isBuffer(key)) {
-      throw new Error('secret-channel/StreamEncrypter: key must be a buffer')
+      throw new Error('secret-channel/Encrypter: key must be a buffer')
     }
     if (key.length !== KEY_SIZE) {
-      throw new Error(`secret-channel/StreamEncrypter: key must be ${KEY_SIZE} bytes`)
+      throw new Error(`secret-channel/Encrypter: key must be ${KEY_SIZE} bytes`)
     }
     this.#key = key
 
     if (!b4a.isBuffer(nonce)) {
-      throw new Error('secret-channel/StreamEncrypter: nonce must be a buffer')
+      throw new Error('secret-channel/Encrypter: nonce must be a buffer')
     }
     if (nonce.length !== NONCE_SIZE) {
-      throw new Error(`secret-channel/StreamEncrypter: nonce must be ${NONCE_SIZE} bytes`)
+      throw new Error(`secret-channel/Encrypter: nonce must be ${NONCE_SIZE} bytes`)
     }
     // clone the nonce so is owned and mutable
     this.#nonce = b4a.allocUnsafe(NONCE_SIZE)
@@ -35,6 +35,9 @@ class StreamEncrypter {
   }
 
   next(plaintext) {
+    if (this.#key === null) {
+      throw new Error('secret-channel/Encrypter: stream has already ended')
+    }
     const plaintextBuffer = b4a.from(plaintext)
     const length = this.#chunkLength(plaintextBuffer.length)
     const content = this.#chunkContent(plaintextBuffer)
@@ -42,8 +45,11 @@ class StreamEncrypter {
   }
 
   end() {
+    if (this.#key === null) {
+      throw new Error('secret-channel/Encrypter: stream has already ended')
+    }
     const eos = this.#chunkEndOfStream()
-    // TODO delete the key
+    this.#key = null
     return eos
   }
 
@@ -70,7 +76,7 @@ class StreamEncrypter {
   }
 }
 
-class StreamDecrypter {
+class Decrypter {
   #crypto
   #key
   #nonce
@@ -79,18 +85,18 @@ class StreamDecrypter {
     this.#crypto = crypto
 
     if (!b4a.isBuffer(key)) {
-      throw new Error('secret-channel/StreamDecrypter: key must be a buffer')
+      throw new Error('secret-channel/Decrypter: key must be a buffer')
     }
     if (key.length !== KEY_SIZE) {
-      throw new Error(`secret-channel/StreamDecrypter: key must be ${KEY_SIZE} bytes`)
+      throw new Error(`secret-channel/Decrypter: key must be ${KEY_SIZE} bytes`)
     }
     this.#key = key
 
     if (!b4a.isBuffer(nonce)) {
-      throw new Error('secret-channel/StreamDecrypter: nonce must be a buffer')
+      throw new Error('secret-channel/Decrypter: nonce must be a buffer')
     }
     if (nonce.length !== NONCE_SIZE) {
-      throw new Error(`secret-channel/StreamEncrypter: nonce must be ${NONCE_SIZE} bytes`)
+      throw new Error(`secret-channel/Encrypter: nonce must be ${NONCE_SIZE} bytes`)
     }
     // clone the nonce so is owned and mutable
     this.#nonce = b4a.allocUnsafe(NONCE_SIZE)
@@ -98,16 +104,21 @@ class StreamDecrypter {
   }
 
   lengthOrEnd(ciphertext) {
+    if (this.#key === null) {
+      throw new Error('secret-channel/Decrypter: stream has already ended')
+    }
+
     if (ciphertext.length !== LENGTH_OR_END_CIPHERTEXT) {
       throw new Error(
-        `secret-channel/StreamDecrypter: length / end ciphertext must be ${LENGTH_OR_END_CIPHERTEXT} bytes`,
+        `secret-channel/Decrypter: length / end ciphertext must be ${LENGTH_OR_END_CIPHERTEXT} bytes`,
       )
     }
 
     const plaintext = this.#decrypt(ciphertext)
 
     if (this.#crypto.isZero(plaintext)) {
-      // TODO delete the key
+      // delete the key
+      this.#key = null
       return {
         type: 'end-of-stream',
       }
@@ -123,6 +134,9 @@ class StreamDecrypter {
   }
 
   content(ciphertext) {
+    if (this.#key === null) {
+      throw new Error('secret-channel/Decrypter: stream has already ended')
+    }
     return this.#decrypt(ciphertext)
   }
 
@@ -136,10 +150,10 @@ class StreamDecrypter {
 function protocol(crypto) {
   return {
     createEncrypter(key, nonce) {
-      return new StreamEncrypter(crypto, key, nonce)
+      return new Encrypter(crypto, key, nonce)
     },
     createDecrypter(key, nonce) {
-      return new StreamDecrypter(crypto, key, nonce)
+      return new Decrypter(crypto, key, nonce)
     },
   }
 }
