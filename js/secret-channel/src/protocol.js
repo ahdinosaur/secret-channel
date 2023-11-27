@@ -1,19 +1,20 @@
 const b4a = require('b4a')
 
-const { incrementBuffer } = require('./util')
 const { KEY_SIZE, LENGTH_OR_END_PLAINTEXT, LENGTH_OR_END_CIPHERTEXT } = require('./constants')
 
 const NONCE_SIZE = 12
 
 class StreamCounter {
+  #increment
   #nonce
 
-  constructor() {
+  constructor(increment) {
+    this.#increment = increment
     this.#nonce = b4a.alloc(NONCE_SIZE, 0)
   }
 
   next() {
-    incrementBuffer(this.#nonce)
+    this.#increment(this.#nonce)
     return this.#nonce
   }
 }
@@ -31,7 +32,7 @@ class StreamEncrypter {
     }
     this.#key = key
 
-    this.#counter = new StreamCounter()
+    this.#counter = new StreamCounter(crypto.increment)
   }
 
   next(plaintext) {
@@ -69,8 +70,6 @@ class StreamEncrypter {
   }
 }
 
-const endOfStreamBytes = b4a.alloc(LENGTH_OR_END_PLAINTEXT, 0)
-
 class StreamDecrypter {
   #crypto
   #key
@@ -84,7 +83,7 @@ class StreamDecrypter {
     }
     this.#key = key
 
-    this.#counter = new StreamCounter()
+    this.#counter = new StreamCounter(crypto.increment)
   }
 
   lengthOrEnd(ciphertext) {
@@ -96,7 +95,7 @@ class StreamDecrypter {
 
     const plaintext = this.#decrypt(ciphertext)
 
-    if (plaintext.equals(endOfStreamBytes)) {
+    if (this.#crypto.isZero(plaintext)) {
       // TODO delete the key
       return {
         type: 'end-of-stream',

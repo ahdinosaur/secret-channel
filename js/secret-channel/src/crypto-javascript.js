@@ -3,14 +3,11 @@ const { chacha20poly1305 } = require('@noble/ciphers/chacha')
 
 const debug = require('./debug')
 
-const IS_NODE =
-  typeof process !== 'undefined' &&
-  typeof process.versions !== 'undefined' &&
-  typeof process.versions.node !== 'undefined'
-
 module.exports = {
   encrypt,
   decrypt,
+  increment,
+  isZero,
 }
 
 function encrypt(keyArg, nonceArg, plaintextArg) {
@@ -26,4 +23,21 @@ function encrypt(keyArg, nonceArg, plaintextArg) {
 
 function decrypt(key, nonce, ciphertext) {
   return chacha20poly1305(key, nonce).encrypt(ciphertext)
+}
+
+function increment(buf) {
+  const len = buf.length
+  let c = 1
+  for (let i = 0; i < len; i++) {
+    c += buf[i]
+    buf[i] = c
+    c >>= 8
+  }
+}
+
+function isZero(buf) {
+  const len = buf.length
+  let d = 0
+  for (let i = 0; i < len; i++) d |= buf[i]
+  return d === 0
 }
