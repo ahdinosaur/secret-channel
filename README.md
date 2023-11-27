@@ -12,7 +12,7 @@ Streaming authenticated encryption using ChaCha20-Poly1305 ([RFC 8439](https://d
 
 - The channel must be reliable and ordered: i.e. TCP.
 - Each channel key must be an ephemeral key for a single channel and discarded when the channel ends.
-    - To get an ephemeral key for a session, you should do a secure key exchange, such as [`secret-handshake`](https://github.com/auditdrivencrypto/secret-handshake).
+    - To get an ephemeral key for a session, you should do a secure key exchange, such as [Secret Handshake](https://dominictarr.github.io/secret-handshake-paper/shs.pdf).
 - For a duplex (bi-directional) connection between peers, you should create two secret channels (with separate keys), one in each direction.
 - A (key, nonce) pair must NEVER be re-used.
 

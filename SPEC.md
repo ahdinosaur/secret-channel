@@ -37,9 +37,8 @@ To increment a 12-byte little-endian unsigned integer, see [libsodium `increment
 
 ```js
 function increment(buf) {
-  const len = buf.length
   let c = 1
-  for (let i = 0; i < len; i++) {
+  for (let i = 0; i < buf.length; i++) {
     c += buf[i]
     buf[i] = c
     c >>= 8
@@ -131,6 +130,63 @@ Then encrypted and authenticated with ChaCha20-Poly1305.
 +-----------------+------------+
 ```
 
+## Comparisons
+
+### Scuttlebutt's Box Stream
+
+Secret Channel is meant to be a successor to Scuttlebutt's [Box Stream](https://ssbc.github.io/scuttlebutt-protocol-guide/#box-stream).
+
+A few similarities:
+
+- Box Stream and Secret Channel both use a preset (random) nonce to start and then increment after each chunk.
+- Box Stream and Secret Channel both have length and content chunks.
+
+A few differences:
+
+- Box Stream increments the nonce as a big-endian unsigned integer.
+  - Secret Channel increments the nonce as little-endian, to be compatible with `libsodium.increment` and more favorable to most CPU architectures.
+- Box Stream uses `libsodium.crypto_secretbox_easy` and `libsodium.crypto_secretbox_open_easy`, which uses XSalsa20-Poly1305.
+  - Secret Channel uses ChaCha20-Poly1305 (the successor to Salsa20-Poly1305) as an AEAD directly.
+- Box Stream appends the authentication tag of the encrypted content into the plaintext of the length chunk.
+
+### Libsodium's secretstream
+
+Libsodium's secretstream is designed to be extra safe and resistant to developer misuse.
+
+Libsodium's secretstream has more features not included in Secret Channel:
+
+- secretstream is a chunked message stream, where each message has a tag: `TAG_MESSAGE`, `TAG_FINAL`, `TAG_PUSH`, and `TAG_REKEY`
+- secretstream uses HChaCha20 to derive a subkey and takes the last 64 bits of the nonce as the nonce for encryption.
+  - This nonce is stored/sent as a header from the encrypter to the decrypter at the beginning of the stream.
+- secretstream uses a 32-bit counter starting at 1 that is prepended to the 64-bit nonce
+  - After every message, the 64-bit nonce becomes the nonce XOR the first 64 bits of the Poly1305 tag.
+  - If the counter is 0, the stream will automatically re-key
+- secretstream gives no guidance on how to handle variable length messages.
+  - Libsodium provides functions `sodium_pad` and `sodium_unpad` to pad messages to fixed lengths.
+
+Overlap:
+
+- secretstream and Secret Channel both use ChaCha20-Poly1305 for encryption.
+
+secretstream has affordances that Secret Channel doesn't need:
+
+- By sending the initial nonce as a header, secretstream doesn't require the encrypter and decrypter to have a shared initial nonce.
+  - Secret Channel is designed for a use with Secret Handshake where we already have a way to generate a shared initial nonce.
+- By using a 64-bit random nonce with a 32-bit counter, secretstream is more safe to re-use keys???
+  - Secret Channel explicitly disallows any key re-use.
+- By XOR'ing the nonce with the previous Poly1305 tag, secretstream is more safe ...???
+  - This also prevents random-access decryption.
+
+### STREAM + ChaCha20-Poly1305
+
+STREAM is designed to avoid nonce-reuse in practical settings where keys may be re-used.
+
+- STREAM is a pattern of using any AEAD as a stream of messages.
+- STREAM encodes the last message with a tag in the AD.
+- STREAM creates each nonce from a random 64-bit prefix and a 32-bit counter.
+  - The likelihood of a collision, even when re-using keys, is considered safe enough.
+- STREAM gives no guidance on how to handle variable length messages.
+
 ## References
 
 - [STREAM: "Online Authenticated-Encryption and its Nonce-Reuse Misuse-Resistance"](https://eprint.iacr.org/2015/189.pdf).
@@ -139,3 +195,4 @@ Then encrypted and authenticated with ChaCha20-Poly1305.
 - [shadowsocks SIP022 AEAD-2022](https://github.com/shadowsocks/shadowsocks-org/blob/main/docs/doc/sip022.md)
 - [libsodium: Encrypting a set of related messages](https://libsodium.gitbook.io/doc/secret-key_cryptography/encrypted-messages)
 - [ChaCha20-Poly1305 Cipher Suites for Transport Layer Security (TLS)](https://www.rfc-editor.org/rfc/rfc7905)
+- [The Security of ChaCha20-Poly1305 in the Multi-user Setting](https://eprint.iacr.org/2023/085.pdf)
