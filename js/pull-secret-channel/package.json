@@ -1,6 +1,6 @@
 {
   "name": "pull-secret-channel",
-  "version": "0.1.1",
+  "version": "1.0.0",
   "description": "Pull stream of authenticated encryption ChaCha20-Poly1305",
   "main": "./src/index.js",
   "scripts": {
@@ -33,7 +33,7 @@
     "b4a": "^1.6.4",
     "pull-reader": "^1.3.1",
     "pull-through": "^1.0.18",
-    "secret-channel": "^0.1.0"
+    "secret-channel": "^1.0.0"
   },
   "devDependencies": {
     "pull-stream": "^3.7.0"
