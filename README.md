@@ -1,4 +1,4 @@
-# secret-channel
+# secret-channel 🤫
 
 Streaming authenticated encryption using ChaCha20-Poly1305 ([RFC 8439](https://datatracker.ietf.org/doc/html/rfc8439)) (or other [AEADs](https://libsodium.gitbook.io/doc/secret-key_cryptography/aead)).
 
