@@ -1,7 +1,10 @@
-const b4a = require('b4a')
 const { chacha20poly1305 } = require('@noble/ciphers/chacha')
 
 const debug = require('./debug')
+
+/**
+ * @typedef {import('./types').B4A} B4A
+ */
 
 module.exports = {
   encrypt,
@@ -10,6 +13,12 @@ module.exports = {
   isZero,
 }
 
+/**
+ * @param {B4A} keyArg
+ * @param {B4A} nonceArg
+ * @param {B4A} plaintextArg
+ * @returns {B4A}
+ */
 function encrypt(keyArg, nonceArg, plaintextArg) {
   // ensure args are Uint8Array's, even in Node.js
   const key = Uint8Array.from(keyArg)
@@ -21,10 +30,20 @@ function encrypt(keyArg, nonceArg, plaintextArg) {
   return ciphertext
 }
 
+/**
+ * @param {B4A} key
+ * @param {B4A} nonce
+ * @param {B4A} ciphertext
+ * @returns {B4A}
+ */
 function decrypt(key, nonce, ciphertext) {
   return chacha20poly1305(key, nonce).encrypt(ciphertext)
 }
 
+/**
+ * @param {B4A} buf
+ * @returns {void}
+ */
 function increment(buf) {
   const len = buf.length
   let c = 1
@@ -35,6 +54,10 @@ function increment(buf) {
   }
 }
 
+/**
+ * @param {B4A} buf
+ * @returns {boolean}
+ */
 function isZero(buf) {
   const len = buf.length
   let d = 0

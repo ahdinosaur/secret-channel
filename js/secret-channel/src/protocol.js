@@ -1,5 +1,10 @@
 const b4a = require('b4a')
 
+/**
+ * @typedef {import("./types").B4A} B4A
+ * @typedef {import("./types").Crypt} Crypt
+ */
+
 const {
   KEY_SIZE,
   NONCE_SIZE,
@@ -8,10 +13,26 @@ const {
 } = require('./constants')
 
 class Encrypter {
+  /**
+   * @type {Crypt}
+   */
   #crypto
+
+  /**
+   * @type {B4A | null}
+   */
   #key
+
+  /**
+   * @type {B4A}
+   */
   #nonce
 
+  /**
+   * @param {Crypt} crypto
+   * @param {B4A} key
+   * @param {B4A} nonce
+   */
   constructor(crypto, key, nonce) {
     this.#crypto = crypto
 
@@ -34,25 +55,30 @@ class Encrypter {
     b4a.copy(nonce, this.#nonce)
   }
 
+  /**
+   * @param {B4A} plaintext
+   * @returns {[B4A, B4A]}
+   */
   next(plaintext) {
-    if (this.#key === null) {
-      throw new Error('secret-channel/Encrypter: stream has already ended')
-    }
     const plaintextBuffer = b4a.from(plaintext)
     const length = this.#chunkLength(plaintextBuffer.length)
     const content = this.#chunkContent(plaintextBuffer)
     return [length, content]
   }
 
+  /**
+   * @returns {B4A}
+   */
   end() {
-    if (this.#key === null) {
-      throw new Error('secret-channel/Encrypter: stream has already ended')
-    }
     const eos = this.#chunkEndOfStream()
     this.#key = null
     return eos
   }
 
+  /**
+   * @param {number} length
+   * @returns {B4A}
+   */
   #chunkLength(length) {
     const lengthData = b4a.allocUnsafe(LENGTH_OR_END_PLAINTEXT)
     const lengthDataView = new DataView(lengthData.buffer, lengthData.byteOffset, lengthData.length)
@@ -60,16 +86,30 @@ class Encrypter {
     return this.#encrypt(lengthData)
   }
 
+  /**
+   * @param {B4A} content
+   * @returns {B4A}
+   */
   #chunkContent(content) {
     return this.#encrypt(content)
   }
 
+  /**
+   * @return {B4A}
+   */
   #chunkEndOfStream() {
     const eos = b4a.alloc(LENGTH_OR_END_PLAINTEXT, 0)
     return this.#encrypt(eos)
   }
 
+  /**
+   * @param {B4A} bytes
+   * @returns {B4A}
+   */
   #encrypt(bytes) {
+    if (this.#key === null) {
+      throw new Error('secret-channel/Encrypter: stream has already ended')
+    }
     const ciphertext = this.#crypto.encrypt(this.#key, this.#nonce, bytes)
     this.#crypto.increment(this.#nonce)
     return ciphertext
@@ -77,10 +117,26 @@ class Encrypter {
 }
 
 class Decrypter {
+  /**
+   * @type {Crypt}
+   */
   #crypto
+
+  /**
+   * @type {B4A}
+   */
   #key
+
+  /**
+   * @type {B4A}
+   */
   #nonce
 
+  /**
+   * @param {Crypt} crypto
+   * @param {B4A} key
+   * @param {B4A} nonce
+   */
   constructor(crypto, key, nonce) {
     this.#crypto = crypto
 
