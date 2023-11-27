@@ -43,6 +43,26 @@ or
 
 ### `content = decrypter.content(ciphertext)`
 
+### `KEY_SIZE`
+
+The size of a ChaCha20-Poly1305 key: 32 bytes
+
+### `TAG_SIZE`
+
+The size of ChaCha20-Poly1305 authentication tag: 16 bytes.
+
+The size of encrypted ciphertext is `plaintext.length + TAG_SIZE`.
+
+The size of decrypted plaintext is `ciphertext.length - TAG_SIZE`.
+
+### `LENGTH_OR_END_PLAINTEXT`
+
+2 bytes
+
+### `LENGTH_OR_END_CIPHERTEXT`
+
+18 bytes (`LENGTH_OR_END_PLAINTEXT + TAG_SIZE`)
+
 ## Example
 
 ### Encryption
@@ -67,7 +87,7 @@ const bytes = b4a.concat(bufferList)
 #### Decryption
 
 ```js
-const { createDecrypter, KEY_SIZE, LENGTH_OR_END_CIPHERTEXT } = require('secret-channel')
+const { createDecrypter, KEY_SIZE, TAG_SIZE, LENGTH_OR_END_CIPHERTEXT } = require('secret-channel')
 
 // const key = ...
 
@@ -81,7 +101,7 @@ if (lengthOrEnd.type === 'end-of-stream') {
 } else if (lengthOrEnd.type === 'length') {
   const length = lengthOrEnd.length
 
-  // receive contentBytes of size `length`
+  // receive contentBytes of size `length + TAG_SIZE`
 
   const content = decrypter.content(contentBytes)
 }

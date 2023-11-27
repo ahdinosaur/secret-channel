@@ -14,14 +14,14 @@ module.exports = {
 
 function encrypt(key, nonce, plaintext) {
   debug('encrypt( %h , %h , %h )', key.slice(0, 2), nonce, plaintext)
-  const ciphertext = b4a.allocUnsafe(plaintext.byteLength + ABYTES)
+  const ciphertext = b4a.allocUnsafe(plaintext.length + ABYTES)
   sodiumEncrypt(ciphertext, plaintext, null, null, nonce, key)
   debug('encrypt -> %h', ciphertext)
   return ciphertext
 }
 
 function decrypt(key, nonce, ciphertext) {
-  const plaintext = b4a.allocUnsafe(ciphertext.byteLength - ABYTES)
+  const plaintext = b4a.allocUnsafe(ciphertext.length - ABYTES)
   sodiumDecrypt(plaintext, null, ciphertext, null, nonce, key)
   return plaintext
 }
