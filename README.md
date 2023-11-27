@@ -12,7 +12,8 @@ A protocol for a secure message stream, after you've done a secure key exchange.
 
 - The channel must be reliable and ordered: i.e. TCP.
 - Each channel key must be an ephemeral key for a single channel and discarded when the channel ends.
-  - To get an ephemeral key for a session, do a secure key exchange, such as [Noise](https://noiseprotocol.org/noise.html) or [Secret Handshake](https://dominictarr.github.io/secret-handshake-paper/shs.pdf) first.
+  - To get a channel key, do a secure key exchange first: e.g. [Noise](https://noiseprotocol.org/noise.html) or [Secret Handshake](https://dominictarr.github.io/secret-handshake-paper/shs.pdf).
+- Each channel has one sender (encrypter) and one receiver (decrypter).
   - For a duplex (bi-directional) connection between peers, create two secret channels (with two separate keys), one in each direction.
 - A (key, nonce) pair must NEVER be re-used.
 
