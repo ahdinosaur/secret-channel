@@ -1,6 +1,6 @@
 # "Secret Channel" Specification 🤫
 
-Streaming authenticated encryption using ChaCha20-Poly1305 ([RFC 8439](https://datatracker.ietf.org/doc/html/rfc8439)).
+Streaming authenticated encryption using [ChaCha20-Poly1305](https://en.wikipedia.org/wiki/ChaCha20-Poly1305)
 
 ## Pre-requisites
 
@@ -37,7 +37,16 @@ Each chunk MUST be encrypted with a unique [nonce](#nonces).
 +---------------------+---------------------------+-----+---------------------+
 ```
 
-### Nonces
+## Cipher
+
+The specific cipher to use is the IETF variant of ChaCha20-Poly1305: [RFC 8439](https://datatracker.ietf.org/doc/html/rfc8439).
+
+If using [libsodium](https://doc.libsodium.org/):
+
+- encrypt with [`crypto_aead_chacha20poly1305_ietf_encrypt`](https://doc.libsodium.org/secret-key_cryptography/aead/chacha20-poly1305/ietf_chacha20-poly1305_construction#combined-mode)
+- decrypt with [`crypto_aead_chacha20poly1305_ietf_decrypt`](https://doc.libsodium.org/secret-key_cryptography/aead/chacha20-poly1305/ietf_chacha20-poly1305_construction#combined-mode)
+
+## Nonces
 
 ChaCha20-Poly1305 requires a 12-byte (96-bit) nonce.
 
@@ -60,9 +69,9 @@ function increment(buf) {
 }
 ```
 
-### Chunks
+## Chunks
 
-#### Length chunk
+### Length chunk
 
 We start with a length chunk, seen here in plaintext:
 
@@ -92,7 +101,7 @@ We encrypt and authenticate the length with ChaCha20-Poly1305 into the following
 +------------------+------------+
 ```
 
-#### Content chunk
+### Content chunk
 
 A content chunk is simply the content.
 
