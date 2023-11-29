@@ -173,6 +173,32 @@ A few differences:
   - Secret Channel uses ChaCha20-Poly1305 (the successor to Salsa20-Poly1305) as an AEAD directly.
 - Box Stream appends the authentication tag of the encrypted content into the plaintext of the length chunk.
 
+### Noise Protocol Framework
+
+Secret Channel is _almost_ compatible with [Noise's transport post-handshake](https://noiseprotocol.org/noise.html#message-format), except for one difference.
+
+- Noise uses an incrementing 64-bit little-endian nonce, starting at 0. is prefixed with 32 bits of zeros before used as a nonce.
+- Secret Channel uses an incrementing 96-bit little-endian nonce, starting with a preset (random) value.
+
+From the Noise spec:
+
+> Nonces are 64 bits because:
+>
+> - Some ciphers only have 64 bit nonces (e.g. Salsa20).
+> - 64 bit nonces were used in the initial specification and implementations of ChaCha20, so Noise nonces can be used with these implementations.
+> - 64 bits makes it easy for the entire nonce to be treated as an integer and incremented.
+> - 96 bits nonces (e.g. in RFC 7539) are a confusing size where it's unclear if random nonces are acceptable.
+
+Secret Channel also includes two [application responsibilities](https://noiseprotocol.org/noise.html#application-responsibilities), not included in Noise, but recommended by Noise for applications.
+
+> Length fields: Applications must handle any framing or additional length fields for Noise messages, considering that a Noise message may be up to 65535 bytes in length. If an explicit length field is needed, applications are recommended to add a 16-bit big-endian length field prior to each message.
+
+- Secret Channel uses a big-endian 16-bit length message before a content message
+
+> Session termination: Applications must consider that a sequence of Noise transport messages could be truncated by an attacker. Applications should include explicit length fields or termination signals inside of transport payloads to signal the end of an interactive session, or the end of a one-way stream of transport messages.
+
+- Secret Channel uses a 0-length message as a signal for end-of-stream
+
 ### Libsodium's secretstream
 
 Libsodium's secretstream is designed to be extra safe and resistant to developer misuse.
@@ -219,3 +245,4 @@ STREAM is designed to avoid nonce-reuse in practical settings where keys may be 
 - [libsodium: Encrypting a set of related messages](https://libsodium.gitbook.io/doc/secret-key_cryptography/encrypted-messages)
 - [ChaCha20-Poly1305 Cipher Suites for Transport Layer Security (TLS)](https://www.rfc-editor.org/rfc/rfc7905)
 - [The Security of ChaCha20-Poly1305 in the Multi-user Setting](https://eprint.iacr.org/2023/085.pdf)
+- [The Noise Protocol Framework](https://noiseprotocol.org/noise.html)
