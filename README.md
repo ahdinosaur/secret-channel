@@ -2,7 +2,7 @@
 
 > Streaming authenticated encryption using ChaCha20-Poly1305 ([RFC 8439](https://datatracker.ietf.org/doc/html/rfc8439)) (or other [AEADs](https://libsodium.gitbook.io/doc/secret-key_cryptography/aead)).
 
-A protocol for a secure message stream, after you've done a secure key exchange.
+A protocol for a secure message stream, after you've done a [secure key exchange](https://github.com/ahdinosaur/secret-handshake).
 
 ![Fig 7 Le Telephone by T du Moncel Paris 1880](./tin-can-telephone.jpg)
 
