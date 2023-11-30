@@ -8,25 +8,6 @@ A protocol for a secure message stream, after you've done a [secure key exchange
 
 (Note: This protocol has not been audited to be safe. Use at your own risk.)
 
-## Pre-requisites
-
-- The channel must be reliable and ordered: i.e. TCP.
-- Each channel key must be an ephemeral key for a single channel and discarded when the channel ends.
-  - To get a channel key, do a secure key exchange first: e.g. [Noise](https://noiseprotocol.org/noise.html) or [Secret Handshake](https://dominictarr.github.io/secret-handshake-paper/shs.pdf).
-- Each channel has one sender (encrypter) and one receiver (decrypter).
-  - For a duplex (bi-directional) connection between peers, create two secret channels (with two separate keys), one in each direction.
-- A (key, nonce) pair must NEVER be re-used.
-
-## Security Guarantees
-
-Secret Channel protects the stream from:
-
-- Stream truncation: avoided by checking for "end-of-stream" as the final chunk.
-- Chunk removal: the wrong nonce would be used, producing an AEAD decryption error.
-- Chunk reordering: the wrong nonce would be used, producing an AEAD decryption error.
-- Chunk duplication: the wrong nonce would be used, producing an AEAD decryption error.
-- Chunk modification: this is what an AEAD is designed to detect.
-
 ## Specification
 
 See [SPEC.md](./SPEC.md)
