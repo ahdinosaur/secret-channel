@@ -6,7 +6,7 @@ Streaming authenticated encryption using [ChaCha20-Poly1305](https://en.wikipedi
 
 - The channel must be reliable and ordered: i.e. TCP.
 - Each channel key must be an ephemeral key for a single channel and discarded when the channel ends.
-  - To get a channel key, do a secure key exchange first: e.g. [Noise](https://noiseprotocol.org/noise.html) or [Secret Handshake](https://dominictarr.github.io/secret-handshake-paper/shs.pdf).
+  - To get a channel key, do a secure key exchange first: e.g. [Noise](https://noiseprotocol.org/noise.html) or [Secret Handshake](https://github.com/ahdinosaur/secret-handshake).
 - Each channel has one sender (encrypter) and one receiver (decrypter).
   - For a duplex (bi-directional) connection between peers, create two secret channels (with two separate keys), one in each direction.
 - A (key, nonce) pair must NEVER be re-used.
@@ -49,26 +49,28 @@ If using [libsodium](https://doc.libsodium.org/):
 
 ## Nonces
 
-ChaCha20-Poly1305 requires a 12-byte (96-bit) nonce.
+To ensure unique nonces over the channel session, we will use a simple counter.
 
-We must ensure both random and unique nonces over the channel session.
+The counter starts at an initial value and increments by 1 with every chunk.
 
-We start with a preset (random) 12-byte (96-bit) nonce, provided when creating the stream.
+> The initial value should be 0, unless you are using Secret Channel as a compatible Noise transport. In which case start with the next counter value after the Noise handshake.
 
-After each chunk, we increment the 12-byte (96-bit) nonce as a little-endian unsigned integer.
+(This is okay because 1) we will never re-use a key, and 2) a 256-bit key protects against [batch/multi-target attacks](https://blog.cr.yp.to/20151120-batchattacks.html).)
 
-To increment a 12-byte little-endian unsigned integer, see [libsodium `increment`](https://doc.libsodium.org/helpers#incrementing-large-numbers), or the following JavaScript code:
+Since the ChaCha20-Poly1305 nonce is 12 bytes (96-bits), we will use a 64-bit unsigned integer as our counter sequence number.
 
-```js
-function increment(buf) {
-  let c = 1
-  for (let i = 0; i < buf.length; i++) {
-    c += buf[i]
-    buf[i] = c
-    c >>= 8
-  }
-}
+The 64-bit counter sequence number is encoded to the 96-bit nonce as follows:
+
+```txt
+nonce:
++-------------+-----------------+
+|   padding   | sequence number |
++-------------+-----------------+
+| 4B (0x0000) |   8B (u64_le)   |
++-------------+-----------------+
 ```
+
+If the counter sequence number overflows, the channel MUST end. (This is not expected to happen.)
 
 ## Chunks
 
@@ -175,19 +177,7 @@ A few differences:
 
 ### Noise Protocol Framework
 
-Secret Channel is _almost_ compatible with [Noise's transport post-handshake](https://noiseprotocol.org/noise.html#message-format), except for one difference.
-
-- Noise uses an incrementing 64-bit little-endian nonce, starting at 0. is prefixed with 32 bits of zeros before used as a nonce.
-- Secret Channel uses an incrementing 96-bit little-endian nonce, starting with a preset (random) value.
-
-From the Noise spec:
-
-> Nonces are 64 bits because:
->
-> - Some ciphers only have 64 bit nonces (e.g. Salsa20).
-> - 64 bit nonces were used in the initial specification and implementations of ChaCha20, so Noise nonces can be used with these implementations.
-> - 64 bits makes it easy for the entire nonce to be treated as an integer and incremented.
-> - 96 bits nonces (e.g. in RFC 7539) are a confusing size where it's unclear if random nonces are acceptable.
+Secret Channel is **compatible** with [Noise's transport post-handshake](https://noiseprotocol.org/noise.html#message-format).
 
 Secret Channel also includes two [application responsibilities](https://noiseprotocol.org/noise.html#application-responsibilities), not included in Noise, but recommended by Noise for applications.
 
@@ -219,8 +209,8 @@ Both secretstream and Secret Channel use ChaCha20-Poly1305 for encryption.
 secretstream has affordances that Secret Channel doesn't need:
 
 - By sending the initial nonce as a header, secretstream doesn't require the encrypter and decrypter to have a shared initial nonce.
-  - Secret Channel is designed for a use with Secret Handshake where we already have a way to generate a shared initial nonce.
-- By using a 64-bit random nonce with a 32-bit counter, secretstream is more safe to re-use keys???
+  - Secret Stream doesn't need a shared initial nonce, but could if needed with outputs from [Secret Handshake](https://github.com/ahdinosaur/secret-handshake).
+- By using a 64-bit random nonce with a 32-bit counter, secretstream is more safe to re-use keys.
   - Secret Channel explicitly disallows any key re-use.
 - By XOR'ing the nonce with the previous Poly1305 tag, secretstream is more safe ...???
   - This also prevents random-access decryption.
