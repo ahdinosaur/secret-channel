@@ -8,7 +8,7 @@
     "exactOptionalPropertyTypes": true,
     "forceConsistentCasingInFileNames": true,
     "lib": ["es2022", "dom"],
-    "module": "node16",
+    "module": "NodeNext",
     "skipLibCheck": true,
     "strict": true,
     "target": "es2021"

@@ -1,7 +1,9 @@
-const b4a = require('b4a')
 const {
+  // @ts-ignore
   crypto_aead_chacha20poly1305_ietf_encrypt: sodiumEncrypt,
+  // @ts-ignore
   crypto_aead_chacha20poly1305_ietf_decrypt: sodiumDecrypt,
+  // @ts-ignore
   crypto_aead_chacha20poly1305_ietf_ABYTES: ABYTES,
   sodium_increment: sodiumIncrement,
   sodium_is_zero: sodiumIsZero,
@@ -28,7 +30,7 @@ module.exports = {
  */
 function encrypt(key, nonce, plaintext) {
   debug('encrypt( %h , %h , %h )', key.slice(0, 2), nonce, plaintext)
-  const ciphertext = b4a.allocUnsafe(plaintext.length + ABYTES)
+  const ciphertext = Buffer.allocUnsafe(plaintext.length + ABYTES)
   sodiumEncrypt(ciphertext, plaintext, null, null, nonce, key)
   debug('encrypt -> %h', ciphertext)
   return ciphertext
@@ -41,7 +43,7 @@ function encrypt(key, nonce, plaintext) {
  * @returns {B4A}
  */
 function decrypt(key, nonce, ciphertext) {
-  const plaintext = b4a.allocUnsafe(ciphertext.length - ABYTES)
+  const plaintext = Buffer.allocUnsafe(ciphertext.length - ABYTES)
   sodiumDecrypt(plaintext, null, ciphertext, null, nonce, key)
   return plaintext
 }
@@ -51,6 +53,7 @@ function decrypt(key, nonce, ciphertext) {
  * @returns {void}
  */
 function increment(buffer) {
+  // @ts-ignore
   sodiumIncrement(buffer)
 }
 
@@ -59,5 +62,6 @@ function increment(buffer) {
  * @returns {boolean}
  */
 function isZero(buffer) {
-  return sodiumIsZero(buffer)
+  // @ts-ignore
+  return sodiumIsZero(buffer, buffer.length)
 }

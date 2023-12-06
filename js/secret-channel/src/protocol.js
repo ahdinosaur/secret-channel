@@ -116,6 +116,15 @@ class Encrypter {
   }
 }
 
+/**
+ * @typedef {{
+ *  type: 'length'
+ *  length: number
+ * } | {
+ *  type: 'end-of-stream'
+ * }} LengthOrEnd
+ */
+
 class Decrypter {
   /**
    * @type {Crypt}
@@ -123,7 +132,7 @@ class Decrypter {
   #crypto
 
   /**
-   * @type {B4A}
+   * @type {B4A | null}
    */
   #key
 
@@ -159,11 +168,11 @@ class Decrypter {
     b4a.copy(nonce, this.#nonce)
   }
 
+  /**
+   * @param {B4A} ciphertext
+   * @returns {LengthOrEnd}
+   */
   lengthOrEnd(ciphertext) {
-    if (this.#key === null) {
-      throw new Error('secret-channel/Decrypter: stream has already ended')
-    }
-
     if (ciphertext.length !== LENGTH_OR_END_CIPHERTEXT) {
       throw new Error(
         `secret-channel/Decrypter: length / end ciphertext must be ${LENGTH_OR_END_CIPHERTEXT} bytes`,
@@ -189,20 +198,35 @@ class Decrypter {
     }
   }
 
+  /**
+   * @param {B4A} ciphertext
+   * @returns {B4A}
+   */
   content(ciphertext) {
-    if (this.#key === null) {
-      throw new Error('secret-channel/Decrypter: stream has already ended')
-    }
     return this.#decrypt(ciphertext)
   }
 
+  /**
+   * @param {B4A} bytes
+   * @returns {B4A}
+   */
   #decrypt(bytes) {
+    if (this.#key === null) {
+      throw new Error('secret-channel/Decrypter: stream has already ended')
+    }
     const plaintext = this.#crypto.decrypt(this.#key, this.#nonce, bytes)
     this.#crypto.increment(this.#nonce)
     return plaintext
   }
 }
 
+/**
+ * @param {Crypt} crypto
+ * @returns {{
+ *   createEncrypter: (key: B4A, nonce: B4A) => Encrypter
+ *   createDecrypter: (key: B4A, nonce: B4A) => Decrypter
+ * }}
+ */
 function protocol(crypto) {
   return {
     createEncrypter(key, nonce) {
