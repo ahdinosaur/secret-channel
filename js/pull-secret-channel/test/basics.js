@@ -109,6 +109,70 @@ test('protect against reordering', async (t) => {
   })
 })
 
+test('detect unexpected hangup', async (t) => {
+  const key = randomBytes(KEY_SIZE)
+  const nonce = randomBytes(NONCE_SIZE)
+
+  const inputBuffers = [
+    Buffer.from('I <3 TLS\n'),
+    Buffer.from('...\n'),
+    Buffer.from('NOT!!!!!!!!!!!!!!!\n'),
+  ]
+
+  await new Promise((resolve, _reject) => {
+    pull(
+      pull.values(inputBuffers),
+      pullEncrypter(key, nonce),
+      pull.take(4), // header content header content.
+      pullDecrypter(key, nonce),
+      pull.collect((err, outputBuffers) => {
+        assert.ok(err) // expects an error
+        assert.equal(outputBuffers.length, 2)
+        assert.equal(Buffer.concat(outputBuffers).toString('utf8'), 'I <3 TLS\n...\n')
+        resolve()
+      }),
+    )
+  })
+})
+
+test('protect against reordering', async (t) => {
+  const key = randomBytes(KEY_SIZE)
+  const nonce = randomBytes(NONCE_SIZE)
+  const inputBuffers = randomBuffers(100, () => 1024)
+
+  await new Promise((resolve, reject) => {
+    pull(
+      pull.values(inputBuffers),
+      pullEncrypter(key, nonce),
+      pull.collect((err, valid) => {
+        if (err) return reject(err)
+
+        // randomly switch two blocks
+        const invalid = valid.slice()
+        // since every even packet is a header,
+        // moving those will produce valid messages
+        // but the counters will be wrong.
+        const i = randomInt(valid.length)
+        const j = randomInt(valid.length)
+        invalid[i] = valid[j]
+        invalid[i + 1] = valid[j + 1]
+        invalid[j] = valid[i]
+        invalid[j + 1] = valid[i + 1]
+
+        pull(
+          pull.values(invalid),
+          pullDecrypter(key, nonce),
+          pull.collect((err, outputBuffers) => {
+            assert.ok(err)
+            assert.notEqual(outputBuffers.length, inputBuffers.length)
+            resolve()
+          }),
+        )
+      }),
+    )
+  })
+})
+
 function randomBuffers(bufferCount, getBufferLength) {
   const buffers = []
   for (let i = 0; i < bufferCount; i++) {
