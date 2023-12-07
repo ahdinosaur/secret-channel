@@ -62,6 +62,9 @@ class Encrypter {
    */
   next(plaintext) {
     const plaintextBuffer = b4a.from(plaintext)
+    if (plaintextBuffer.length === 0) {
+      throw Error('secret-channel/Encrypter: content length of 0 is not allowed')
+    }
     if (plaintextBuffer.length > MAX_CONTENT_LENGTH) {
       throw Error(
         `secret-channel/Encrypter: content length of ${plaintextBuffer.length} exceeds max ${MAX_CONTENT_LENGTH}`,

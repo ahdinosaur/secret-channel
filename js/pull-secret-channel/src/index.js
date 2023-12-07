@@ -43,6 +43,10 @@ function pullEncrypter(key, nonce) {
      * @param {B4A} contentPlaintext
      */
     function pullEncrypterData(contentPlaintext) {
+      if (contentPlaintext.length === 0) {
+        return // skip
+      }
+
       try {
         let totalContentPlaintext = contentPlaintext
         while (totalContentPlaintext.length > 0) {
