@@ -18,9 +18,6 @@ test('encrypt and decrypt: simple', async (t) => {
     pull(
       pull.values([plaintext1]),
       pullEncrypter(key, nonce),
-      pull.through((ciphertext) => {
-        console.log('Encrypted: ', ciphertext)
-      }),
       pullDecrypter(key, nonce),
       pull.concat((err, plaintext2) => {
         if (err) return reject(err)
@@ -66,10 +63,47 @@ test('detect flipped bits', async (t) => {
       pullBitflipper(0.2),
       pullDecrypter(key, nonce),
       pull.collect((err, outputBuffers) => {
-        console.error(err)
         assert.ok(err)
         assert.notEqual(outputBuffers.length, inputBuffers.length)
         resolve()
+      }),
+    )
+  })
+})
+
+test('protect against reordering', async (t) => {
+  const key = randomBytes(KEY_SIZE)
+  const nonce = randomBytes(NONCE_SIZE)
+  const inputBuffers = randomBuffers(100, () => 1024)
+
+  await new Promise((resolve, reject) => {
+    pull(
+      pull.values(inputBuffers),
+      pullEncrypter(key, nonce),
+      pull.collect((err, valid) => {
+        if (err) return reject(err)
+
+        // randomly switch two blocks
+        const invalid = valid.slice()
+        // since every even packet is a header,
+        // moving those will produce valid messages
+        // but the counters will be wrong.
+        const i = randomInt(valid.length)
+        const j = randomInt(valid.length)
+        invalid[i] = valid[j]
+        invalid[i + 1] = valid[j + 1]
+        invalid[j] = valid[i]
+        invalid[j + 1] = valid[i + 1]
+
+        pull(
+          pull.values(invalid),
+          pullDecrypter(key, nonce),
+          pull.collect((err, outputBuffers) => {
+            assert.ok(err)
+            assert.notEqual(outputBuffers.length, inputBuffers.length)
+            resolve()
+          }),
+        )
       }),
     )
   })
