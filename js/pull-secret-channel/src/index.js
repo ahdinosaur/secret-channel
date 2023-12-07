@@ -9,6 +9,7 @@ const {
   NONCE_SIZE,
   LENGTH_OR_END_CIPHERTEXT,
   TAG_SIZE,
+  MAX_CONTENT_LENGTH,
 } = require('secret-channel')
 
 module.exports = {
@@ -25,6 +26,7 @@ module.exports = {
   @typedef {(end: End, cb: (end: End, data?: any) => void) => void} Source
   @typedef {{
      queue: (buf: B4A | null) => void
+     emit: (event: 'data' | 'end' | 'error', data?: any) => void
   }} PullThroughThis
 */
 
@@ -41,9 +43,19 @@ function pullEncrypter(key, nonce) {
      * @param {B4A} contentPlaintext
      */
     function pullEncrypterData(contentPlaintext) {
-      const [lengthCiphertext, contentCiphertext] = encrypter.next(contentPlaintext)
-      this.queue(lengthCiphertext)
-      this.queue(contentCiphertext)
+      try {
+        let totalContentPlaintext = contentPlaintext
+        while (totalContentPlaintext.length > 0) {
+          const nextContentPlaintext = totalContentPlaintext.subarray(0, MAX_CONTENT_LENGTH)
+          totalContentPlaintext = totalContentPlaintext.subarray(MAX_CONTENT_LENGTH)
+
+          const [lengthCiphertext, contentCiphertext] = encrypter.next(nextContentPlaintext)
+          this.queue(lengthCiphertext)
+          this.queue(contentCiphertext)
+        }
+      } catch (err) {
+        this.emit('error', err)
+      }
     },
 
     /**
