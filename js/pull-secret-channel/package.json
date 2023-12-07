@@ -16,6 +16,7 @@
     "src/**/*"
   ],
   "scripts": {
+    "prepublishOnly": "npm run build",
     "build": "npm run test:types && tsc --build",
     "test": "npm run test:types && node --test",
     "test:types": "tsc --build --clean"

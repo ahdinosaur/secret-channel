@@ -48,7 +48,7 @@ function increment(buf) {
   const len = buf.length
   let c = 1
   for (let i = 0; i < len; i++) {
-    c += buf[i]
+    c += /** @type number */ (buf[i])
     buf[i] = c
     c >>= 8
   }
@@ -61,6 +61,8 @@ function increment(buf) {
 function isZero(buf) {
   const len = buf.length
   let d = 0
-  for (let i = 0; i < len; i++) d |= buf[i]
+  for (let i = 0; i < len; i++) {
+    d |= /** @type number */ (buf[i])
+  }
   return d === 0
 }
