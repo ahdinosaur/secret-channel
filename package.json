@@ -1,6 +1,7 @@
 {
   "name": "secret-channel-project",
   "scripts": {
+    "build": "npm run build --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",
     "lint": "prettier --check \"./js/*/(src|test|bench)/**/*.js\"",
     "format": "prettier --write \"./js/*/(src|test|bench)/**/*.js\""
@@ -9,6 +10,10 @@
     "./js/*"
   ],
   "devDependencies": {
-    "prettier": "^3.1.0"
+    "@types/b4a": "^1.6.4",
+    "@types/debug": "^4.1.12",
+    "@types/node": "^20.10.0",
+    "prettier": "^3.1.0",
+    "typescript": "^5.3.2"
   }
 }

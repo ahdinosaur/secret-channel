@@ -2,12 +2,24 @@
   "name": "secret-channel",
   "version": "1.0.0",
   "description": "Streaming authenticated encryption using ChaCha20-Poly1305",
+  "type": "commonjs",
   "main": "./src/index.js",
+  "types": "./src/index.d.ts",
+  "exports": {
+    ".": "./src/index.js",
+    "./javascript": "./src/javascript.js"
+  },
   "browser": {
     "./src/index.js": "./src/javascript.js"
   },
+  "files": [
+    "src/**/*"
+  ],
   "scripts": {
-    "test": "node --test"
+    "prepublishOnly": "npm run build",
+    "build": "npm run test:types && tsc --build",
+    "test": "npm run test:types && node --test",
+    "test:types": "tsc --build --clean"
   },
   "repository": {
     "type": "git",
@@ -32,6 +44,7 @@
   "homepage": "https://github.com/ahdinosaur/secret-channel#readme",
   "dependencies": {
     "@noble/ciphers": "^0.4.0",
+    "@types/sodium-native": "^2.3.9",
     "b4a": "^1.6.4",
     "debug": "^4.3.4",
     "sodium-native": "^4.0.4"

@@ -2,9 +2,24 @@
   "name": "pull-secret-channel",
   "version": "1.0.0",
   "description": "Pull stream of authenticated encryption ChaCha20-Poly1305",
+  "type": "commonjs",
   "main": "./src/index.js",
+  "types": "./src/index.d.ts",
+  "exports": {
+    ".": "./src/index.js",
+    "./javascript": "./src/javascript.js"
+  },
+  "browser": {
+    "./src/index.js": "./src/javascript.js"
+  },
+  "files": [
+    "src/**/*"
+  ],
   "scripts": {
-    "test": "node --test"
+    "prepublishOnly": "npm run build",
+    "build": "npm run test:types && tsc --build",
+    "test": "npm run test:types && node --test",
+    "test:types": "tsc --build --clean"
   },
   "repository": {
     "type": "git",
