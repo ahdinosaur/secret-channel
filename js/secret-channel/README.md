@@ -63,6 +63,10 @@ The size of decrypted plaintext is `ciphertext.length - TAG_SIZE`.
 
 18 bytes (`LENGTH_OR_END_PLAINTEXT + TAG_SIZE`)
 
+### `MAX_CONTENT_LENGTH`
+
+$`2^{16} - 1`$
+
 ## Example
 
 ### Encryption

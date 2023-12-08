@@ -87,7 +87,7 @@ We start with a length chunk, seen here in plaintext:
 
 The length is a 16-bits unsigned integer (encoded as big-endian).
 
-(The maximum content length is 2^16 bytes or 65,536 bytes or 65.536 Kb)
+(The maximum content length is $`2^{16} - 1`$ bytes or 65,535 bytes or 65.535 Kb)
 
 A length of `0` is not a valid length. (And instead refers to a [End-of-stream chunk](#end-of-stream-chunk))
 
@@ -106,9 +106,9 @@ We encrypt and authenticate the length with ChaCha20-Poly1305 into the following
 
 A content chunk is simply the content.
 
-From 0 to 2^16 (65,536) bytes. (Matching the length in the previous chunk.)
+From $`0`$ to $`2^{16} - 1`$ (65,535) bytes. (Matching the length in the previous chunk.)
 
-If content is larger than 2^16 (65,536) bytes, split the bytes across multiple chunks.
+If content is larger than $`2^{16} - 1`$ (65,535) bytes, split the bytes across multiple chunks.
 
 ```txt
 Variable length content (plaintext):

@@ -10,6 +10,7 @@ const {
   NONCE_SIZE,
   LENGTH_OR_END_PLAINTEXT,
   LENGTH_OR_END_CIPHERTEXT,
+  MAX_CONTENT_LENGTH,
 } = require('./constants')
 
 class Encrypter {
@@ -61,6 +62,14 @@ class Encrypter {
    */
   next(plaintext) {
     const plaintextBuffer = b4a.from(plaintext)
+    if (plaintextBuffer.length === 0) {
+      throw Error('secret-channel/Encrypter: content length of 0 is not allowed')
+    }
+    if (plaintextBuffer.length > MAX_CONTENT_LENGTH) {
+      throw Error(
+        `secret-channel/Encrypter: content length of ${plaintextBuffer.length} exceeds max ${MAX_CONTENT_LENGTH}`,
+      )
+    }
     const length = this.#chunkLength(plaintextBuffer.length)
     const content = this.#chunkContent(plaintextBuffer)
     return [length, content]
@@ -82,7 +91,7 @@ class Encrypter {
   #chunkLength(length) {
     const lengthData = b4a.allocUnsafe(LENGTH_OR_END_PLAINTEXT)
     const lengthDataView = new DataView(lengthData.buffer, lengthData.byteOffset, lengthData.length)
-    lengthDataView.setInt16(0, length, false)
+    lengthDataView.setUint16(0, length, false)
     return this.#encrypt(lengthData)
   }
 
@@ -191,7 +200,7 @@ class Decrypter {
 
     const lengthData = plaintext
     const lengthDataView = new DataView(lengthData.buffer, lengthData.byteOffset, lengthData.length)
-    const length = lengthDataView.getInt16(0, false)
+    const length = lengthDataView.getUint16(0, false)
     return {
       type: 'length',
       length,
