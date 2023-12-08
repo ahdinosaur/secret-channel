@@ -205,3 +205,61 @@ function randomBuffers(bufferCount, getBufferLength) {
   }
   return buffers
 }
+
+test('stalled abort: encrypter', async (t) => {
+  const key = randomBytes(KEY_SIZE)
+  const nonce = randomBytes(NONCE_SIZE)
+
+  const stallErr = new Error('intentional stall')
+  const read = pull(stall(), pullEncrypter(key, nonce))
+
+  let i = 0
+
+  await new Promise((resolve, _reject) => {
+    read(null, function (err, _data) {
+      assert.equal(err, stallErr)
+      assert.equal(++i, 1)
+    })
+
+    read(stallErr, function () {
+      assert.ok(true)
+      assert.equal(++i, 2)
+      resolve()
+    })
+  })
+})
+
+test('stalled abort: decrypter', async (t) => {
+  const key = randomBytes(KEY_SIZE)
+  const nonce = randomBytes(NONCE_SIZE)
+
+  const stallErr = new Error('intentional stall')
+  const read = pull(stall(), pullDecrypter(key, nonce))
+
+  let i = 0
+
+  await new Promise((resolve, _reject) => {
+    read(null, function (err, _data) {
+      assert.equal(err, stallErr)
+      assert.equal(++i, 1)
+    })
+
+    read(stallErr, function () {
+      assert.ok(true)
+      assert.equal(++i, 2)
+      resolve()
+    })
+  })
+})
+
+function stall() {
+  var _cb
+  return function (abort, cb) {
+    if (abort) {
+      _cb && _cb(abort)
+      cb && cb(abort)
+    } else {
+      _cb = cb
+    }
+  }
+}
