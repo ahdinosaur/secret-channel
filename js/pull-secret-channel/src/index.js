@@ -22,8 +22,9 @@ module.exports = {
 
 /**
   @typedef {Buffer | Uint8Array} B4A
-  @typedef {null | true | Error} End
-  @typedef {(end: End, cb: (end: End, data?: any) => void) => void} Source
+  @typedef {import('pull-stream').Source<B4A>} Source
+  @typedef {import('pull-stream').Through<B4A, B4A>} Through
+  @typedef {import('pull-stream').EndOrError} EndOrError
   @typedef {{
      queue: (buf: B4A | null) => void
      emit: (event: 'data' | 'end' | 'error', data?: any) => void
@@ -33,6 +34,7 @@ module.exports = {
 /**
  * @param {B4A} key
  * @param {B4A} nonce
+ * @returns {Through}
  */
 function pullEncrypter(key, nonce) {
   const encrypter = createEncrypter(key, nonce)
@@ -76,23 +78,25 @@ function pullEncrypter(key, nonce) {
 /**
  * @param {B4A} key
  * @param {B4A} nonce
+ * @returns {Through}
  */
 function pullDecrypter(key, nonce) {
   const decrypter = createDecrypter(key, nonce)
 
-  /** @type {End} */
+  /** @type {EndOrError} */
   let ending = null
   const reader = pullReader()
 
   /**
    * @param {Source} read
+   * @returns {Source}
    */
   return function pullDecrypterThrough(read) {
     reader(read)
 
     /**
-     * @param {End} end
-     * @param {(end: End, data?: B4A) => void} cb
+     * @param {EndOrError} end
+     * @param {(end: EndOrError, data?: B4A) => void} cb
      */
     return function pullDecrypterSource(end, cb) {
       if (end) return reader.abort(end, cb)
@@ -102,7 +106,7 @@ function pullDecrypter(key, nonce) {
         LENGTH_OR_END_CIPHERTEXT,
 
         /**
-         * @param {End} err
+         * @param {EndOrError} err
          * @param {B4A} lengthOrEndCiphertext
          */
         function (err, lengthOrEndCiphertext) {
@@ -135,7 +139,7 @@ function pullDecrypter(key, nonce) {
           reader.read(
             length + TAG_SIZE,
             /**
-             * @param {End} err
+             * @param {EndOrError} err
              * @param {B4A} contentCiphertext
              */
             function (err, contentCiphertext) {
@@ -162,7 +166,7 @@ function pullDecrypter(key, nonce) {
       // use abort when the input was invalid,
       // but the source hasn't actually ended yet.
       /**
-       * @param {End} err
+       * @param {EndOrError} err
        */
       function abort(err) {
         ending = err || true
